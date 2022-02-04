@@ -26,6 +26,7 @@ import com.hazelcast.jet.sql.SqlTestSupport.Row;
 import com.hazelcast.map.IMap;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.annotation.Repeat;
 import com.hazelcast.test.annotation.SlowTest;
 import org.junit.After;
 import org.junit.Before;
@@ -61,7 +62,7 @@ public class MapScanMigrationStressTest extends JetTestSupport {
         factory = new TestHazelcastFactory();
         instances = new HazelcastInstance[4];
         for (int i = 0; i < instances.length - 1; i++) {
-            instances[i] = factory.newHazelcastInstance(smallInstanceConfig());
+            instances[i] = factory.newHazelcastInstance(regularInstanceConfig());
         }
         SqlTestSupport.createMapping(instances[0], MAP_NAME, Integer.class, Integer.class);
         map = instances[0].getMap(MAP_NAME);
@@ -126,6 +127,7 @@ public class MapScanMigrationStressTest extends JetTestSupport {
     }
 
     @Test(timeout = 600_000)
+    @Repeat(30)
     public void stressTest_sortedIndex() throws InterruptedException {
         List<Row> expected = new ArrayList<>();
         Map<Integer, Integer> temp = new HashMap<>();
@@ -169,11 +171,11 @@ public class MapScanMigrationStressTest extends JetTestSupport {
                     } else {
                         firstLaunch = false;
                     }
-                    instances[3] = factory.newHazelcastInstance(smallInstanceConfig());
+                    instances[3] = factory.newHazelcastInstance(regularInstanceConfig());
 
                     Thread.sleep(delay);
                 } catch (Exception e) {
-                    mutatorException.set(e);
+                    mutatorException.compareAndSet(null, e);
                     e.printStackTrace();
                 }
             }

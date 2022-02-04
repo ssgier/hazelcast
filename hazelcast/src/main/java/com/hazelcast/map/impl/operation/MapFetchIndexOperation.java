@@ -45,6 +45,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.locks.LockSupport;
 
 import static com.hazelcast.internal.util.Preconditions.checkPositive;
 import static com.hazelcast.map.impl.MapDataSerializerHook.MAP_FETCH_INDEX_OPERATION;
@@ -133,6 +134,7 @@ public class MapFetchIndexOperation extends MapOperation implements ReadonlyOper
 
     @SuppressWarnings({"checkstyle:CyclomaticComplexity", "checkstyle:NPathComplexity", "checkstyle:MethodLength"})
     private MapFetchIndexOperationResult runInternalSorted(InternalIndex index) {
+        LockSupport.parkNanos(1_000_000);
         List<QueryableEntry<?, ?>> entries = new ArrayList<>(sizeLimit);
         int partitionCount = getNodeEngine().getPartitionService().getPartitionCount();
 

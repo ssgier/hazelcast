@@ -19,8 +19,12 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.DataSerializable;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
 import java.util.Collection;
 
 import static com.hazelcast.jet.impl.util.Util.toList;
@@ -29,12 +33,15 @@ import static com.hazelcast.jet.impl.util.Util.toList;
  * A {@link ProcessorSupplier} which wraps another {@code ProcessorSupplier}
  * with one that will wrap its processors using {@code wrapperSupplier}.
  */
-public final class WrappingProcessorSupplier implements ProcessorSupplier {
+public final class WrappingProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
     private static final long serialVersionUID = 1L;
 
     private ProcessorSupplier wrapped;
     private FunctionEx<Processor, Processor> wrapperSupplier;
+
+    @SuppressWarnings("unused") // for deserialization
+    public WrappingProcessorSupplier() {}
 
     public WrappingProcessorSupplier(ProcessorSupplier wrapped,
                                      FunctionEx<Processor, Processor> wrapperSupplier
@@ -58,5 +65,17 @@ public final class WrappingProcessorSupplier implements ProcessorSupplier {
     @Override
     public void close(Throwable error) throws Exception {
         wrapped.close(error);
+    }
+
+    @Override
+    public void writeData(ObjectDataOutput out) throws IOException {
+        out.writeObject(wrapped);
+        out.writeObject(wrapperSupplier);
+    }
+
+    @Override
+    public void readData(ObjectDataInput in) throws IOException {
+        wrapped = in.readObject();
+        wrapperSupplier = in.readObject();
     }
 }

@@ -37,11 +37,11 @@ public class MapTableIndex {
     private final List<QueryDataType> fieldConverterTypes;
 
     public MapTableIndex(
-        String name,
-        IndexType type,
-        int componentsCount,
-        List<Integer> fieldOrdinals,
-        List<QueryDataType> fieldConverterTypes
+            String name,
+            IndexType type,
+            int componentsCount,
+            List<Integer> fieldOrdinals,
+            List<QueryDataType> fieldConverterTypes
     ) {
         this.name = name;
         this.type = type;
@@ -83,10 +83,10 @@ public class MapTableIndex {
         MapTableIndex index = (MapTableIndex) o;
 
         return componentsCount == index.componentsCount
-            && name.equals(index.name)
-            && type == index.type
-            && fieldOrdinals.equals(index.fieldOrdinals)
-            && fieldConverterTypes.equals(index.fieldConverterTypes);
+                && name.equals(index.name)
+                && type == index.type
+                && fieldOrdinals.equals(index.fieldOrdinals)
+                && fieldConverterTypes.equals(index.fieldConverterTypes);
     }
 
     @Override
@@ -102,6 +102,6 @@ public class MapTableIndex {
     @Override
     public String toString() {
         return "MapTableIndex {name='" + name + '\'' + ", type=" + type + ", componentsCount=" + componentsCount
-            + ", fieldOrdinals=" + fieldOrdinals + ", fieldConverterTypes=" + fieldConverterTypes + '}';
+                + ", fieldOrdinals=" + fieldOrdinals + ", fieldConverterTypes=" + fieldConverterTypes + '}';
     }
 }

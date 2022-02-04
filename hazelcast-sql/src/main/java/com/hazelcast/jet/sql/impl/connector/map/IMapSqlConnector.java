@@ -38,7 +38,6 @@ import com.hazelcast.jet.sql.impl.connector.keyvalue.KvProcessors;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvProjector;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
-import com.hazelcast.sql.impl.row.JetSqlRow;
 import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
@@ -49,6 +48,7 @@ import com.hazelcast.sql.impl.exec.scan.index.IndexFilter;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
 import com.hazelcast.sql.impl.extract.QueryPath;
+import com.hazelcast.sql.impl.row.JetSqlRow;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.schema.Table;
@@ -220,8 +220,8 @@ public class IMapSqlConnector implements SqlConnector {
                 "Index(" + toString(table) + ")",
                 readMapIndexSupplier(indexScanMetadata)
         );
-        // LP must be 1 - one local index contains all local partitions, if there are 2 local processors,
-        // the index will be scanned twice and each time half of the partitions will be thrown out.
+        // LP must be 1 - one local index contains all local partitions, if there were 2 local processors,
+        // the index would be scanned twice and each time half of the partitions would be thrown out.
         scanner.localParallelism(1);
 
         if (tableIndex.getType() == IndexType.SORTED) {

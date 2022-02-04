@@ -29,7 +29,6 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.connector.AbstractIndexReader;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
-import com.hazelcast.sql.impl.row.JetSqlRow;
 import com.hazelcast.map.impl.operation.MapFetchIndexOperation;
 import com.hazelcast.map.impl.operation.MapFetchIndexOperation.MapFetchIndexOperationResult;
 import com.hazelcast.map.impl.operation.MapFetchIndexOperation.MissingPartitionException;
@@ -50,6 +49,7 @@ import com.hazelcast.sql.impl.exec.scan.MapIndexScanMetadata;
 import com.hazelcast.sql.impl.exec.scan.MapScanRow;
 import com.hazelcast.sql.impl.exec.scan.index.IndexFilter;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
+import com.hazelcast.sql.impl.row.JetSqlRow;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -148,12 +148,20 @@ final class MapIndexScanP extends AbstractProcessor {
         return true;
     }
 
+    private JetSqlRow lastItem;
+
     private boolean runSortedIndex() {
         for (; ; ) {
-            if (pendingItem != null && !tryEmit(pendingItem)) {
-                return false;
-            } else {
-                pendingItem = null;
+            if (pendingItem != null) {
+                if (!tryEmit(pendingItem)) {
+                    return false;
+                } else {
+                    if (lastItem != null && metadata.getComparator().compare(pendingItem, lastItem) < 0) {
+                        throw new RuntimeException("disorder!, lastItem=" + lastItem + ", pendingItem=" + pendingItem);
+                    }
+                    lastItem = pendingItem;
+                    pendingItem = null;
+                }
             }
 
             JetSqlRow extreme = null;
@@ -163,6 +171,7 @@ final class MapIndexScanP extends AbstractProcessor {
                 try {
                     split.peek();
                 } catch (MissingPartitionException e) {
+                    getLogger().info("aaa " + e);
                     splits.addAll(splitOnMigration(split));
                     splits.remove(i--);
                     continue;
@@ -227,10 +236,9 @@ final class MapIndexScanP extends AbstractProcessor {
      * Perform splitting of a {@link Split} after receiving {@link MissingPartitionException}
      * or various cluster state exceptions like {@link MemberLeftException}.
      * <p>
-     * Method gets current partition table and proceeds with following procedure:
-     * <p>
-     * It splits the partitions assigned to the split according to the new
-     * partition owner into disjoint sets, one for each owner.
+     * Method gets the current partition table and splits the partitions
+     * contained in the input split according to the new partition owners,
+     * creating one split for each owner.
      *
      * @param split the split to split
      * @return collection of new split units
@@ -248,9 +256,7 @@ final class MapIndexScanP extends AbstractProcessor {
             // and it causes this method to be called again.
             // Occasionally prediction with current member would be correct.
             Address potentialOwner = partitionService.getPartition(partitionId).getOwnerOrNull();
-            Address owner = potentialOwner == null
-                    ? split.owner
-                    : partitionService.getPartition(partitionId).getOwnerOrNull();
+            Address owner = potentialOwner != null ? potentialOwner : split.owner;
 
             newSplits.computeIfAbsent(owner, x -> new Split(
                     new PartitionIdSet(partitionService.getPartitionCount()), owner, lastPointers)
@@ -327,7 +333,7 @@ final class MapIndexScanP extends AbstractProcessor {
         /**
          * Returns a topology exception from the given Throwable or its causes.
          * Topology exception are those related to a member leaving the cluster.
-         * We handle them the same as {@link MissingPartitionException} trigger.
+         * We handle them the same as {@link MissingPartitionException}.
          */
         @SuppressWarnings("BooleanExpressionComplexity")
         private Throwable findTopologyExceptionInCauses(Throwable t) {

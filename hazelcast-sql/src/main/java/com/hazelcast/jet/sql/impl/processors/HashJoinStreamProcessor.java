@@ -35,12 +35,11 @@ import com.hazelcast.jet.sql.impl.QueryResultProducerImpl;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
-import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryResultProducer;
 import com.hazelcast.sql.impl.ResultIterator;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
-import com.hazelcast.sql.impl.row.Row;
+import com.hazelcast.sql.impl.row.JetSqlRow;
 import com.hazelcast.sql.impl.state.QueryResultRegistry;
 
 import javax.annotation.Nonnull;
@@ -107,7 +106,7 @@ public class HashJoinStreamProcessor extends AbstractProcessor {
         return Traversers.traverseIterable(output);
     }
 
-    private ResultIterator<Row> executeDag() {
+    private ResultIterator<JetSqlRow> executeDag() {
         JobConfig jobConfig = new JobConfig()
                 .setArgument(SQL_ARGUMENTS_KEY_NAME, evalContext.getArguments())
                 .setTimeoutMillis(TIMEOUT);
@@ -135,22 +134,14 @@ public class HashJoinStreamProcessor extends AbstractProcessor {
         assert ordinal == 0;
 
         hashMap.clear();
-        ResultIterator<Row> rightResult = executeDag();
+        ResultIterator<JetSqlRow> rightResult = executeDag();
         rightResult.forEachRemaining(row -> {
-            int rightLen = row.getColumnCount();
-            JetSqlRow rightRow = rowToJetRow(row, rightLen);
+            int rightLen = row.getFieldCount();
+            JetSqlRow rightRow = row.extendedRow(rightLen);
             ObjectArrayKey joinKeys = ObjectArrayKey.project(rightRow, joinInfo.rightEquiJoinIndices());
             hashMap.put(joinKeys, rightRow);
         });
         super.process(ordinal, inbox);
-    }
-
-    private JetSqlRow rowToJetRow(Row row, int len) {
-        Object[] result = new Object[len];
-        for (int i = 0; i < len; i++) {
-            result[i] = row.get(i);
-        }
-        return new JetSqlRow(evalContext.getSerializationService(), result);
     }
 
     @Override
@@ -175,7 +166,6 @@ public class HashJoinStreamProcessor extends AbstractProcessor {
         private JetJoinInfo joinInfo;
         private int rightInputColumnCount;
         private DAG subDag;
-        private SqlRowMetadata rightRowMetadata;
 
         @SuppressWarnings("unused") // for deserialization
         private HashJoinStreamProcessorSupplier() {

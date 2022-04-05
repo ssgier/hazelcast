@@ -23,24 +23,24 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelRule;
 import org.apache.calcite.plan.RelRule.Config;
-import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.core.Calc;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.rules.TransformationRule;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.rex.RexProgram;
+import org.immutables.value.Value;
 
-import java.util.Arrays;
+import java.util.List;
 
 import static com.hazelcast.jet.sql.impl.opt.Conventions.LOGICAL;
-import static com.hazelcast.jet.sql.impl.opt.OptUtils.inlineExpression;
 
 /**
- * Logical rule that pushes down a {@link Filter} into a {@link TableScan} to allow for constrained scans.
+ * Logical rule that pushes a {@link Calc} down into a {@link TableScan} to allow for constrained scans.
  * See {@link HazelcastTable} for more information about constrained scans.
  * <p>
  * Before:
  * <pre>
- * LogicalFilter[filter=exp1]
+ * LogicalCalc[filter=exp1]
  *     LogicalScan[table[filter=exp2]]
  * </pre>
  * After:
@@ -48,47 +48,51 @@ import static com.hazelcast.jet.sql.impl.opt.OptUtils.inlineExpression;
  * LogicalScan[table[filter=exp1 AND exp2]]
  * </pre>
  */
-public final class FilterIntoScanLogicalRule extends RelRule<Config> implements TransformationRule {
+@Value.Enclosing
+public final class CalcIntoScanLogicalRule extends RelRule<Config> implements TransformationRule {
 
-    private static final Config CONFIG = Config.EMPTY
-            .withDescription(FilterIntoScanLogicalRule.class.getSimpleName())
-            .withOperandSupplier(b0 -> b0
-                    .operand(Filter.class)
-                    .trait(LOGICAL)
-                    .inputs(b1 -> b1
-                            .operand(FullScanLogicalRel.class).anyInputs()));
+    @Value.Immutable
+    public interface Config extends RelRule.Config {
+        CalcIntoScanLogicalRule.Config DEFAULT = ImmutableCalcIntoScanLogicalRule.Config.builder()
+                .description(CalcIntoScanLogicalRule.class.getSimpleName())
+                .operandSupplier(b0 -> b0
+                        .operand(CalcLogicalRel.class)
+                        .trait(LOGICAL)
+                        .inputs(b1 -> b1
+                                .operand(FullScanLogicalRel.class).anyInputs()))
+                .build();
 
-    public static final RelOptRule INSTANCE = new FilterIntoScanLogicalRule(CONFIG);
+        @Override
+        default RelOptRule toRule() {
+            return new CalcIntoScanLogicalRule(this);
+        }
+    }
 
-    private FilterIntoScanLogicalRule(Config config) {
+    public static final CalcIntoScanLogicalRule INSTANCE = new CalcIntoScanLogicalRule(Config.DEFAULT);
+
+    private CalcIntoScanLogicalRule(Config config) {
         super(config);
     }
 
     @Override
     public void onMatch(RelOptRuleCall call) {
-        Filter filter = call.rel(0);
+        CalcLogicalRel calc = call.rel(0);
         FullScanLogicalRel scan = call.rel(1);
 
         HazelcastTable table = OptUtils.extractHazelcastTable(scan);
-        RexNode existingCondition = table.getFilter();
 
-        // inline the table projections into the merged condition. For example, if we have this relexp:
-        //   Filter[$0=?]
-        //     Scan[projects=[$1 + $2]
-        // The filter condition will be converted to:
-        //   [$1 + $2 = ?]
-        RexNode convertedCondition = inlineExpression(table.getProjects(), filter.getCondition());
-        if (existingCondition != null) {
-            convertedCondition = RexUtil.composeConjunction(
-                    scan.getCluster().getRexBuilder(),
-                    Arrays.asList(existingCondition, convertedCondition),
-                    true
-            );
+        RexProgram program = calc.getProgram();
+
+        List<RexNode> newProjects = program.expandList(program.getProjectList());
+        HazelcastTable newTable = table.withProject(newProjects, program.getOutputRowType());
+
+        if (program.getCondition() != null) {
+            newTable = newTable.withFilter(program.expandLocalRef(program.getCondition()));
         }
 
         HazelcastRelOptTable convertedTable = OptUtils.createRelTable(
                 (HazelcastRelOptTable) scan.getTable(),
-                table.withFilter(convertedCondition),
+                newTable,
                 scan.getCluster().getTypeFactory()
         );
 

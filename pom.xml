@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2008-2021, Hazelcast, Inc. All Rights Reserved.
+  ~ Copyright (c) 2008-2022, Hazelcast, Inc. All Rights Reserved.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
     <groupId>com.hazelcast</groupId>
     <artifactId>hazelcast-root</artifactId>
     <packaging>pom</packaging>
-    <version>5.1-SNAPSHOT</version>
+    <version>5.2-SNAPSHOT</version>
     <name>Hazelcast Root</name>
     <description>Hazelcast In-Memory DataGrid</description>
     <url>http://www.hazelcast.com/</url>
@@ -50,10 +50,10 @@
         <hazelcast.serialization.version>1</hazelcast.serialization.version>
         <hazelcast.serverMainClass>com.hazelcast.core.server.HazelcastMemberStarter</hazelcast.serverMainClass>
 
-        <maven.compiler.plugin.version>3.9.0</maven.compiler.plugin.version>
+        <maven.compiler.plugin.version>3.10.0</maven.compiler.plugin.version>
         <maven.jar.plugin.version>3.2.2</maven.jar.plugin.version>
         <maven.source.plugin.version>3.2.1</maven.source.plugin.version>
-        <maven.javadoc.plugin.version>3.3.1</maven.javadoc.plugin.version>
+        <maven.javadoc.plugin.version>3.3.2</maven.javadoc.plugin.version>
         <maven.javadoc.plugin.excludePackageNames>
             *.impl:*.impl.*:*.internal:*.internal.*:*.operations:*.proxy:
             com.hazelcast.aws.security:*.handlermigration:*.client.connection.nio:
@@ -68,7 +68,7 @@
         <maven.bundle.plugin.version>2.4.0</maven.bundle.plugin.version>
         <maven.shade.plugin.version>3.2.4</maven.shade.plugin.version>
         <maven.dependency.plugin.version>3.2.0</maven.dependency.plugin.version>
-        <maven.animal.sniffer.plugin.version>1.19</maven.animal.sniffer.plugin.version>
+        <maven.animal.sniffer.plugin.version>1.21</maven.animal.sniffer.plugin.version>
         <maven.git.commit.id.plugin.version>2.1.10</maven.git.commit.id.plugin.version>
 
         <maven.surefire.plugin.version>2.22.2</maven.surefire.plugin.version>
@@ -93,31 +93,31 @@
         <antlr4.version>4.9.3</antlr4.version>
         <avro.version>1.11.0</avro.version>
         <aws.sdk.version>1.12.150</aws.sdk.version>
-        <classgraph.version>4.8.138</classgraph.version>
+        <classgraph.version>4.8.139</classgraph.version>
         <grpc.version>1.43.0</grpc.version>
         <guava.version>30.1.1-jre</guava.version>
         <hadoop.version>3.3.1</hadoop.version>
-        <jackson.version>2.12.1</jackson.version>
+        <jackson.version>2.12.6</jackson.version>
         <jackson.mapper.asl.version>1.9.14.jdk17-redhat-00001</jackson.mapper.asl.version>
         <jline.version>3.21.0</jline.version>
         <jms.api.version>2.0.1</jms.api.version>
-        <json-surfer.version>0.10</json-surfer.version>
+        <json-surfer.version>0.11-SNAPSHOT</json-surfer.version>
         <jsr107.api.version>1.1.1</jsr107.api.version> <!-- JCache -->
         <jsr250.api.version>1.2</jsr250.api.version> <!-- javax.annotations -->
-        <kafka.version>2.2.2</kafka.version>
+        <kafka.version>2.8.1</kafka.version>
         <kotlin.version>1.5.32</kotlin.version>
-        <log4j.version>1.2.17.redhat-3</log4j.version>
+        <log4j.version>1.2.17.redhat-00008</log4j.version>
         <log4j2.version>2.17.1</log4j2.version>
         <mysql.connector.version>8.0.20</mysql.connector.version>
-        <netty.version>4.1.73.Final</netty.version>
+        <netty.version>4.1.74.Final</netty.version>
         <objenesis.version>3.2</objenesis.version>
         <osgi.version>4.2.0</osgi.version>
         <parquet.version>1.12.2</parquet.version>
         <picocli.version>4.4.0</picocli.version>
         <prometheus.version>0.14.0</prometheus.version>
         <protobuf.version>3.19.4</protobuf.version>
-        <scala.version>2.12</scala.version>
-        <slf4j.version>1.7.35</slf4j.version>
+        <scala.version>2.13</scala.version>
+        <slf4j.version>1.7.36</slf4j.version>
         <spring.version>4.3.0.RELEASE</spring.version>
         <snakeyaml.version>1.30</snakeyaml.version>
         <snakeyaml.engine.version>2.3</snakeyaml.engine.version>
@@ -135,14 +135,12 @@
         <findbugs.annotations.version>3.0.1u2</findbugs.annotations.version>
         <hamcrest.version>1.3</hamcrest.version>
         <http.components.version>4.3.6</http.components.version>
-        <jmh.version>1.34</jmh.version>
         <jsr107.tck.version>1.1.1</jsr107.tck.version>
         <junit.version>4.13.2</junit.version>
         <mockito.version>3.6.0</mockito.version>
         <powermock.version>2.0.9</powermock.version>
         <reflections.version>0.9.10</reflections.version>
         <testcontainers.version>1.15.3</testcontainers.version>
-        <zookeeper.version>3.5.8</zookeeper.version>
         <archunit.version>0.22.0</archunit.version>
         <errorprone.version>2.11.0</errorprone.version>
         <awaitility.version>4.1.1</awaitility.version>
@@ -307,8 +305,13 @@
                     <source>${jdk.version}</source>
                     <target>${jdk.version}</target>
                     <encoding>${project.build.sourceEncoding}</encoding>
-                    <!-- Exclude package-info.java from compiler's scope to avoid recompiling all classes every time. -->
-                    <!-- https://issues.apache.org/jira/browse/MCOMPILER-205 -->
+                    <!--
+                    Workaround for compilation failure on Windows in hazelcast-sql module:
+                    Compilation failure
+                    org.immutables.value.internal.$processor$.$Processor threw com.sun.tools.javac.jvm.ClassReader$BadClassFile: bad class file: hazelcast\target\hazelcast-5.2-SNAPSHOT.jar(com/hazelcast/jet/package-info.class)
+                    class file contains wrong class: com\hazelcast\jet\package-info
+                    Please remove or make sure it appears in the correct subdirectory of the classpath.
+                    -->
                     <excludes>
                         <exclude>**/package-info.java</exclude>
                     </excludes>
@@ -560,6 +563,31 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>animal-sniffer-maven-plugin</artifactId>
+                <configuration>
+                    <checkTestClasses>true</checkTestClasses>
+                    <signature>
+                        <groupId>org.codehaus.mojo.signature</groupId>
+                        <artifactId>java18</artifactId>
+                        <version>1.0</version>
+                    </signature>
+                    <ignores>
+                        <ignore>java.lang.invoke.MethodHandle</ignore>
+                        <ignore>sun.misc.Unsafe</ignore>
+                    </ignores>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>source-java8-check</id>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
@@ -622,7 +650,7 @@
                 <plugin>
                     <groupId>com.hazelcast.maven</groupId>
                     <artifactId>attribution-maven-plugin</artifactId>
-                    <version>1.0.1</version>
+                    <version>1.0.2</version>
                     <configuration>
                         <exclusionPatterns>
                         <!--
@@ -642,6 +670,11 @@
                             <exclusionPattern>inside edge crossings that are between</exclusionPattern>
                         </exclusionPatterns>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>animal-sniffer-maven-plugin</artifactId>
+                    <version>${maven.animal.sniffer.plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -1043,6 +1076,12 @@
                                 </goals>
                             </execution>
                         </executions>
+                        <configuration>
+                            <gpgArguments>
+                                <gpgArgument>--pinentry-mode</gpgArgument>
+                                <gpgArgument>loopback</gpgArgument>
+                            </gpgArguments>
+                        </configuration>
                     </plugin>
 
                     <plugin>
@@ -1241,6 +1280,7 @@
                 <!--
                 Allow access to Operating system metrics:
                    open jdk.management/com.sun.management.internal
+                   export jdk.management/com.ibm.lang.management.internal
 
                 Avoid warnings caused by reflection in
                 SelectorOptimizer:
@@ -1260,9 +1300,20 @@
                     --add-opens java.base/java.lang=${hazelcast.module.name}
                     --add-opens java.management/sun.management=${hazelcast.module.name}
                     --add-exports java.xml/jdk.xml.internal=${hazelcast.module.name}
+                    --add-exports jdk.management/com.ibm.lang.management.internal=${hazelcast.module.name}
                     --illegal-access=deny
                 </javaModuleArgs>
             </properties>
+        </profile>
+
+        <profile>
+            <id>modulepath-tests</id>
+            <activation>
+                <property>
+                    <name>!quick</name>
+                </property>
+                <jdk>[9,)</jdk>
+            </activation>
             <modules>
                 <module>modulepath-tests</module>
             </modules>
@@ -1333,6 +1384,7 @@
             <modules>
                 <module>extensions</module>
                 <module>distribution</module>
+                <module>hazelcast-it</module>
             </modules>
         </profile>
         <profile>
@@ -1376,6 +1428,10 @@
             <id>central</id>
             <name>Central Repository</name>
             <url>https://repo.maven.apache.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
+            </releases>
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
@@ -1394,6 +1450,10 @@
         <repository>
             <id>confluent</id>
             <url>https://packages.confluent.io/maven/</url>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
+            </releases>
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
@@ -1404,6 +1464,7 @@
             <url>https://repository.hazelcast.com/security-maven/</url>
             <releases>
                 <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
             </releases>
             <snapshots>
                 <enabled>false</enabled>
@@ -1415,6 +1476,7 @@
             <url>https://maven.repository.redhat.com/ga/</url>
             <releases>
                 <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
             </releases>
             <snapshots>
                 <enabled>false</enabled>
@@ -1742,6 +1804,21 @@
               <artifactId>netty-tcnative-classes</artifactId>
               <version>2.0.48.Final</version>
             </dependency>
+            <dependency>
+              <groupId>com.google.http-client</groupId>
+              <artifactId>google-http-client-jackson2</artifactId>
+              <version>1.40.1</version>
+            </dependency>
+            <dependency>
+              <groupId>com.google.api-client</groupId>
+              <artifactId>google-api-client</artifactId>
+              <version>1.32.2</version>
+            </dependency>
+            <dependency>
+              <groupId>com.google.api.grpc</groupId>
+              <artifactId>proto-google-iam-v1</artifactId>
+              <version>1.1.7</version>
+            </dependency>
             <!--
             The following are test dependencies, they are not in the final distribution.
             We put them there for the dependency convergence task to succeed.
@@ -1885,18 +1962,6 @@
             </exclusions>
         </dependency>
 
-        <dependency>
-            <groupId>org.openjdk.jmh</groupId>
-            <artifactId>jmh-core</artifactId>
-            <version>${jmh.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.openjdk.jmh</groupId>
-            <artifactId>jmh-generator-annprocess</artifactId>
-            <version>${jmh.version}</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>

@@ -68,6 +68,7 @@ import static com.hazelcast.security.permission.ActionConstants.ACTION_CREATE;
 import static com.hazelcast.security.permission.ActionConstants.ACTION_READ;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -90,6 +91,8 @@ import static java.util.stream.Collectors.toList;
  * `split` is removed from execution.
  */
 final class MapIndexScanP extends AbstractProcessor {
+
+    private static final long DELAY_AFTER_MISSING_PARTITION = MILLISECONDS.toNanos(100);
 
     private final MapIndexScanMetadata metadata;
 
@@ -263,7 +266,15 @@ final class MapIndexScanP extends AbstractProcessor {
             ).partitions.add(partitionId);
         }
 
-        return new ArrayList<>(newSplits.values());
+        ArrayList<Split> res = new ArrayList<>(newSplits.values());
+        // if the resulting split is the same as the input split, postpone retrying it
+        if (res.size() == 1) {
+            Split newSplit = res.get(0);
+            if (newSplit.owner.equals(split.owner) && newSplit.partitions.equals(split.partitions)) {
+                newSplit.postponeUntil(System.nanoTime() + DELAY_AFTER_MISSING_PARTITION);
+            }
+        }
+        return res;
     }
 
     /**
@@ -278,6 +289,7 @@ final class MapIndexScanP extends AbstractProcessor {
         private JetSqlRow currentRow;
         private int currentBatchPosition;
         private CompletableFuture<MapFetchIndexOperationResult> future;
+        private long postponeUntil = Long.MIN_VALUE;
 
         private Split(PartitionIdSet partitions, Address owner, IndexIterationPointer[] pointers) {
             this.partitions = partitions;
@@ -287,12 +299,24 @@ final class MapIndexScanP extends AbstractProcessor {
             this.future = null;
         }
 
+        private void postponeUntil(long postponeUntil) {
+            this.postponeUntil = postponeUntil;
+        }
+
         /**
          * After this call, {@link #currentRow} will return the next entry to emit.
          * They are set to null, if there's no row available
          * because we're either done or waiting for more data.
          */
         private void peek() {
+            if (postponeUntil > Long.MIN_VALUE) {
+                if (System.nanoTime() < postponeUntil) {
+                    return;
+                } else {
+                    postponeUntil = Long.MIN_VALUE;
+                }
+            }
+
             // start a new async call, if we're not done and one isn't in flight
             if (future == null && pointers.length > 0) {
                 future = reader.readBatch(owner, partitions, pointers);
@@ -367,6 +391,15 @@ final class MapIndexScanP extends AbstractProcessor {
 
         private boolean done() {
             return currentBatchPosition == currentBatch.size() && pointers.length == 0;
+        }
+
+        @Override
+        public String toString() {
+            return "Split{" +
+                    "partitions=" + partitions +
+                    ", owner=" + owner +
+                    ", hash=" + System.identityHashCode(this) +
+                    '}';
         }
     }
 

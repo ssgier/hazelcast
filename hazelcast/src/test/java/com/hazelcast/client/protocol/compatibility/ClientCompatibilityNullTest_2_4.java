@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2021, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2022, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -6181,6 +6181,8 @@ public class ClientCompatibilityNullTest_2_4 {
         assertTrue(isEqual(aBoolean, parameters.readBackupData));
         assertTrue(isEqual(anInt, parameters.evictionPolicy));
         assertTrue(isEqual(aString, parameters.mergePolicy));
+        assertTrue(parameters.isGlobalIndexesExists);
+        assertTrue(isEqual(aListOfIndexConfigs, parameters.globalIndexes));
     }
 
     @Test
@@ -6620,6 +6622,8 @@ public class ClientCompatibilityNullTest_2_4 {
     @Test
     public void test_MCReloadConfigCodec_decodeResponse() {
         int fileClientMessageIndex = 844;
+        ClientMessage fromFile = clientMessages.get(fileClientMessageIndex);
+        assertTrue(isEqual(aUUID, MCReloadConfigCodec.decodeResponse(fromFile)));
     }
 
     @Test
@@ -6633,6 +6637,8 @@ public class ClientCompatibilityNullTest_2_4 {
     @Test
     public void test_MCUpdateConfigCodec_decodeResponse() {
         int fileClientMessageIndex = 846;
+        ClientMessage fromFile = clientMessages.get(fileClientMessageIndex);
+        assertTrue(isEqual(aUUID, MCUpdateConfigCodec.decodeResponse(fromFile)));
     }
 
     @Test

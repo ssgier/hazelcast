@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2021, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2022, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,7 +123,7 @@ public abstract class AbstractSerializationService implements InternalSerializat
         CompactSerializationConfig compactSerializationCfg = builder.compactSerializationConfig == null
                 ? new CompactSerializationConfig() : builder.compactSerializationConfig;
         compactStreamSerializer = new CompactStreamSerializer(compactSerializationCfg,
-                managedContext, builder.schemaService, classLoader, this::createObjectDataInput, this::createObjectDataOutput);
+                managedContext, builder.schemaService, classLoader);
         this.compactWithSchemaSerializerAdapter = new CompactWithSchemaStreamSerializerAdapter(compactStreamSerializer);
         this.compactSerializerAdapter = new CompactStreamSerializerAdapter(compactStreamSerializer);
     }
@@ -274,7 +274,7 @@ public abstract class AbstractSerializationService implements InternalSerializat
             throw handleException(e);
         } finally {
             ClassLocator.onFinishDeserialization();
-            serializer.conditionallyReturnInputBufferToPool(obj, in, pool);
+            pool.returnInputBuffer(in);
         }
     }
 
@@ -399,6 +399,11 @@ public abstract class AbstractSerializationService implements InternalSerializat
     @Override
     public final BufferObjectDataOutput createObjectDataOutput(int size) {
         return inputOutputFactory.createOutput(size, this);
+    }
+
+    @Override
+    public BufferObjectDataOutput createObjectDataOutput(int initialSize, int firstGrowthSize) {
+        return inputOutputFactory.createOutput(initialSize, firstGrowthSize, this);
     }
 
     @Override

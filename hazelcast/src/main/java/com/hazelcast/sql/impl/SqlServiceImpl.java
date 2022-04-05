@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2021, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2022, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -245,23 +245,16 @@ public class SqlServiceImpl implements SqlService {
 
     private SqlPlan prepare(String schema, String sql, List<Object> arguments, SqlExpectedResultType expectedResultType) {
         List<List<String>> searchPaths = prepareSearchPaths(schema);
-
         PlanKey planKey = new PlanKey(searchPaths, sql);
-
         SqlPlan plan = planCache.get(planKey);
-
         if (plan == null) {
             SqlCatalog catalog = new SqlCatalog(optimizer.tableResolvers());
-
             plan = optimizer.prepare(new OptimizationTask(sql, arguments, searchPaths, catalog));
-
             if (plan.isCacheable()) {
                 planCache.put(planKey, plan);
             }
         }
-
         checkReturnType(plan, expectedResultType);
-
         return plan;
     }
 

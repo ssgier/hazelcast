@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2021, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2022, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import com.hazelcast.internal.partition.impl.PartitionServiceState;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.server.ServerConnectionManager;
+import com.hazelcast.internal.util.OsHelper;
 import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
@@ -88,7 +89,6 @@ import java.util.function.BiConsumer;
 import static com.hazelcast.internal.partition.TestPartitionUtils.getPartitionServiceState;
 import static com.hazelcast.internal.util.ExceptionUtil.rethrow;
 import static com.hazelcast.internal.util.OsHelper.isLinux;
-import static com.hazelcast.internal.util.StringUtil.lowerCaseInternal;
 import static com.hazelcast.test.TestEnvironment.isRunningCompatibilityTest;
 import static java.lang.Integer.getInteger;
 import static java.lang.String.format;
@@ -118,6 +118,7 @@ public abstract class HazelcastTestSupport {
 
     public static final String JAVA_VERSION = System.getProperty("java.version");
     public static final String JVM_NAME = System.getProperty("java.vm.name");
+    public static final String JAVA_VENDOR = System.getProperty("java.vendor");
 
     public static final int ASSERT_TRUE_EVENTUALLY_TIMEOUT;
     public static final int ASSERT_COMPLETES_STALL_TOLERANCE;
@@ -720,13 +721,11 @@ public abstract class HazelcastTestSupport {
     }
 
     public static void waitInstanceForSafeState(final HazelcastInstance instance) {
-        assertTrueEventually(() -> {
-            isInstanceInSafeState(instance);
-        });
+        assertTrueEventually(() -> assertTrue(isInstanceInSafeState(instance)));
     }
 
     public static void waitClusterForSafeState(final HazelcastInstance instance) {
-        assertTrueEventually((() -> assertTrue(isClusterInSafeState(instance))));
+        assertTrueEventually(() -> assertTrue(isClusterInSafeState(instance)));
     }
 
     public static void waitUntilClusterState(HazelcastInstance hz, ClusterState state, int timeoutSeconds) {
@@ -1610,8 +1609,12 @@ public abstract class HazelcastTestSupport {
         assumeFalse("Zing JDK6 used", JAVA_VERSION.startsWith("1.6.") && JVM_NAME.startsWith("Zing"));
     }
 
+    public static void assumeThatNotIBMJDK17() {
+        assumeFalse("Skipping on IBM JDK 17", JAVA_VERSION.startsWith("17.") && JAVA_VENDOR.contains("IBM"));
+    }
+
     public static void assumeThatNoWindowsOS() {
-        assumeFalse(lowerCaseInternal(System.getProperty("os.name")).contains("windows"));
+        assumeFalse("Skipping on Windows", OsHelper.isWindows());
     }
 
     public static void assumeThatLinuxOS() {

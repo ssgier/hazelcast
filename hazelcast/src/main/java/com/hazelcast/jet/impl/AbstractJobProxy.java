@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2021, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2022, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.LocalMemberResetException;
 import com.hazelcast.core.MemberLeftException;
-import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
@@ -270,7 +269,7 @@ public abstract class AbstractJobProxy<C, M> implements Job {
     /**
      * Submit and join job with a given DAG and config
      */
-    protected abstract CompletableFuture<Void> invokeSubmitJob(Data jobDefinition, JobConfig config);
+    protected abstract CompletableFuture<Void> invokeSubmitJob(Object jobDefinition, JobConfig config);
 
     /**
      * Join already existing job
@@ -312,8 +311,7 @@ public abstract class AbstractJobProxy<C, M> implements Job {
     private NonCompletableFuture doSubmitJob(Object jobDefinition, JobConfig config) {
         NonCompletableFuture submitFuture = new NonCompletableFuture();
         SubmitJobCallback callback = new SubmitJobCallback(submitFuture, jobDefinition, config);
-        invokeSubmitJob(serializationService().toData(jobDefinition), config)
-                .whenCompleteAsync(callback);
+        invokeSubmitJob(jobDefinition, config).whenCompleteAsync(callback);
         return submitFuture;
     }
 
@@ -391,6 +389,7 @@ public abstract class AbstractJobProxy<C, M> implements Job {
         }
 
         protected abstract void retryActionInt(Throwable t);
+
         protected abstract String operationName();
     }
 
@@ -407,7 +406,7 @@ public abstract class AbstractJobProxy<C, M> implements Job {
         @Override
         protected void retryActionInt(Throwable t) {
             logger.fine("Resubmitting job " + idAndName() + " after " + t.getClass().getSimpleName());
-            invokeSubmitJob(serializationService().toData(jobDefinition), config).whenCompleteAsync(this);
+            invokeSubmitJob(jobDefinition, config).whenCompleteAsync(this);
         }
 
         @Override

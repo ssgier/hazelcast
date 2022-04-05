@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2021, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2022, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ import com.hazelcast.config.WanConsumerConfig;
 import com.hazelcast.config.WanCustomPublisherConfig;
 import com.hazelcast.config.WanReplicationConfig;
 import com.hazelcast.config.WanReplicationRef;
-import com.hazelcast.memory.MemorySize;
+import com.hazelcast.memory.Capacity;
 import org.snakeyaml.engine.v2.api.Dump;
 import org.snakeyaml.engine.v2.api.DumpSettings;
 import org.snakeyaml.engine.v2.common.FlowStyle;
@@ -836,7 +836,7 @@ public class DynamicConfigYamlGenerator {
         return memoryTierConfigAsMap;
     }
 
-    private static Map<String, Object> getCapacityAsMap(MemorySize capacity) {
+    private static Map<String, Object> getCapacityAsMap(Capacity capacity) {
         if (capacity == null) {
             return null;
         }
@@ -1283,6 +1283,7 @@ public class DynamicConfigYamlGenerator {
         );
 
         addNonNullToMap(mapStoreConfigAsMap, "initial-mode", mapStoreConfig.getInitialLoadMode().name());
+        addNonNullToMap(mapStoreConfigAsMap, "write-coalescing", mapStoreConfig.isWriteCoalescing());
         addNonNullToMap(mapStoreConfigAsMap, "write-delay-seconds", mapStoreConfig.getWriteDelaySeconds());
         addNonNullToMap(mapStoreConfigAsMap, "write-batch-size", mapStoreConfig.getWriteBatchSize());
 

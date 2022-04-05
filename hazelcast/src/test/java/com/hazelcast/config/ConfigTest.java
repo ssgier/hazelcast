@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2021, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2022, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package com.hazelcast.config;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.instance.EndpointQualifier;
+import com.hazelcast.memory.Capacity;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.annotation.ParallelJVMTest;
@@ -278,6 +279,11 @@ public class ConfigTest extends HazelcastTestSupport {
             @Override
             public boolean isLocal() {
                 return false;
+            }
+
+            @Override
+            public Capacity getCapacity() {
+                return LocalDeviceConfig.DEFAULT_CAPACITY;
             }
 
             @Override

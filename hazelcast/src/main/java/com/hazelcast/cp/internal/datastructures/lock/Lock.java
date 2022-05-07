@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 
@@ -189,23 +188,25 @@ public class Lock extends BlockingResource<LockInvocationKey> implements Identif
     }
 
     private Collection<LockInvocationKey> setNewLockOwner() {
-        Collection<LockInvocationKey> newOwnerWaitKeys;
-        Iterator<WaitKeyContainer<LockInvocationKey>> iter = waitKeyContainersIterator();
-        if (iter.hasNext()) {
-            WaitKeyContainer<LockInvocationKey> container = iter.next();
-            LockInvocationKey newOwner = container.key();
-            newOwnerWaitKeys = container.keyAndRetries();
 
-            iter.remove();
-            owner = newOwner;
-            lockCount = 1;
-            ownerInvocationRefUids.put(BiTuple.of(owner.endpoint(), owner.invocationUid()), lockOwnershipState());
-        } else {
-            owner = null;
-            newOwnerWaitKeys = Collections.emptyList();
-        }
+        return withWeightKeysContainerIterator(iter -> {
+            Collection<LockInvocationKey> newOwnerWaitKeys;
+            if (iter.hasNext()) {
+                WaitKeyContainer<LockInvocationKey> container = iter.next();
+                LockInvocationKey newOwner = container.key();
+                newOwnerWaitKeys = container.keyAndRetries();
 
-        return newOwnerWaitKeys;
+                iter.remove();
+                owner = newOwner;
+                lockCount = 1;
+                ownerInvocationRefUids.put(BiTuple.of(owner.endpoint(), owner.invocationUid()), lockOwnershipState());
+            } else {
+                owner = null;
+                newOwnerWaitKeys = Collections.emptyList();
+            }
+
+            return newOwnerWaitKeys;
+        });
     }
 
     LockOwnershipState lockOwnershipState() {

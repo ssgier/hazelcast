@@ -30,6 +30,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Operations on a {@link BlockingResource} may not return a response
@@ -45,6 +49,7 @@ public abstract class BlockingResource<W extends WaitKey> implements DataSeriali
     private String name;
     // Should be an insertion ordered map to ensure fairness
     private final Map<Object, WaitKeyContainer<W>> waitKeys = new LinkedHashMap<>();
+    private final Lock waitKeysLock = new ReentrantLock();
 
     protected BlockingResource() {
     }
@@ -60,6 +65,28 @@ public abstract class BlockingResource<W extends WaitKey> implements DataSeriali
 
     public final String getName() {
         return name;
+    }
+
+    protected <T> T withWeightKeysContainerIterator(Function<Iterator<WaitKeyContainer<W>>, T> processingFunction) {
+        return withSynchronizedWaitKeys(() -> processingFunction.apply(waitKeys.values().iterator()));
+    }
+
+    private void withSynchronizedWaitKeys(Runnable processingFunction) {
+        waitKeysLock.lock();
+        try {
+            processingFunction.run();
+        } finally {
+            waitKeysLock.unlock();
+        }
+    }
+
+    private <T> T withSynchronizedWaitKeys(Supplier<T> processingFunction) {
+        waitKeysLock.lock();
+        try {
+            return processingFunction.get();
+        } finally {
+            waitKeysLock.unlock();
+        }
     }
 
     // only for testing purposes
@@ -81,90 +108,111 @@ public abstract class BlockingResource<W extends WaitKey> implements DataSeriali
     protected abstract Collection<Long> getActivelyAttachedSessions();
 
     protected final void addWaitKey(Object waitKeyId, W waitKey) {
-        WaitKeyContainer<W> container = waitKeys.get(waitKeyId);
-        if (container != null) {
-            container.addRetry(waitKey);
-        } else {
-            waitKeys.put(waitKeyId, new WaitKeyContainer<>(waitKey));
-        }
+
+        withSynchronizedWaitKeys(() -> {
+            WaitKeyContainer<W> container = waitKeys.get(waitKeyId);
+            if (container != null) {
+                container.addRetry(waitKey);
+            } else {
+                waitKeys.put(waitKeyId, new WaitKeyContainer<>(waitKey));
+            }
+        });
     }
 
     protected final WaitKeyContainer<W> getWaitKeyContainer(Object waitKeyId) {
-        return waitKeys.get(waitKeyId);
+        return withSynchronizedWaitKeys(() -> waitKeys.get(waitKeyId));
     }
 
     protected final void removeWaitKey(Object waitKeyId) {
-        waitKeys.remove(waitKeyId);
+        withSynchronizedWaitKeys(() -> waitKeys.remove(waitKeyId));
     }
 
     protected final Collection<W> getAllWaitKeys() {
-        List<W> all = new ArrayList<>(waitKeys.size());
-        for (WaitKeyContainer<W> container : waitKeys.values()) {
-            all.addAll(container.keyAndRetries());
-        }
 
-        return all;
+        return withSynchronizedWaitKeys(() -> {
+            List<W> all = new ArrayList<>(waitKeys.size());
+            for (WaitKeyContainer<W> container : waitKeys.values()) {
+                all.addAll(container.keyAndRetries());
+            }
+
+            return all;
+        });
     }
 
     final void expireWaitKeys(UUID invocationUid, List<W> expired) {
-        Iterator<WaitKeyContainer<W>> iter = waitKeys.values().iterator();
-        while (iter.hasNext()) {
-            WaitKeyContainer<W> container = iter.next();
-            if (container.invocationUid().equals(invocationUid)) {
-                expired.addAll(container.keyAndRetries());
-                iter.remove();
-                onWaitKeyExpire(container.key());
-                return;
+
+        withSynchronizedWaitKeys(() -> {
+            Iterator<WaitKeyContainer<W>> iter = waitKeys.values().iterator();
+            while (iter.hasNext()) {
+                WaitKeyContainer<W> container = iter.next();
+                if (container.invocationUid().equals(invocationUid)) {
+                    expired.addAll(container.keyAndRetries());
+                    iter.remove();
+                    onWaitKeyExpire(container.key());
+                    return;
+                }
             }
-        }
+        });
     }
 
     protected void onWaitKeyExpire(W waitKey) {
     }
 
-    protected final Iterator<WaitKeyContainer<W>> waitKeyContainersIterator() {
-        return waitKeys.values().iterator();
-    }
-
     protected final void clearWaitKeys() {
-        waitKeys.clear();
+        withSynchronizedWaitKeys(waitKeys::clear);
     }
 
     final void closeSession(long sessionId, List<Long> expiredWaitKeys, Map<Long, Object> result) {
-        Iterator<WaitKeyContainer<W>> iter = waitKeys.values().iterator();
-        while (iter.hasNext()) {
-            WaitKeyContainer<W> container = iter.next();
-            if (container.sessionId() == sessionId) {
-                for (W retry : container.keyAndRetries()) {
-                    expiredWaitKeys.add(retry.commitIndex());
-                }
 
-                iter.remove();
+        withSynchronizedWaitKeys(() -> {
+            Iterator<WaitKeyContainer<W>> iter = waitKeys.values().iterator();
+            while (iter.hasNext()) {
+                WaitKeyContainer<W> container = iter.next();
+                if (container.sessionId() == sessionId) {
+                    for (W retry : container.keyAndRetries()) {
+                        expiredWaitKeys.add(retry.commitIndex());
+                    }
+
+                    iter.remove();
+                }
             }
-        }
+        });
 
         onSessionClose(sessionId, result);
     }
 
     final void collectAttachedSessions(Collection<Long> sessions) {
         sessions.addAll(getActivelyAttachedSessions());
-        for (WaitKeyContainer<W> key : waitKeys.values()) {
-            sessions.add(key.sessionId());
-        }
+
+        withSynchronizedWaitKeys(() -> {
+            for (WaitKeyContainer<W> key : waitKeys.values()) {
+                sessions.add(key.sessionId());
+            }
+        });
     }
 
     protected final void cloneForSnapshot(BlockingResource<W> clone) {
         clone.groupId = groupId;
         clone.name = name;
-        clone.waitKeys.putAll(waitKeys);
+
+        withSynchronizedWaitKeys(() -> {
+            clone.withSynchronizedWaitKeys(() -> {
+                clone.waitKeys.putAll(waitKeys);
+            });
+        });
     }
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeObject(groupId);
         out.writeString(name);
-        out.writeInt(waitKeys.size());
-        for (Entry<Object, WaitKeyContainer<W>> e : waitKeys.entrySet()) {
+        out.writeInt(withSynchronizedWaitKeys(() -> waitKeys.size()));
+
+        Map<Object, WaitKeyContainer<W>> waitKeysCopy = new LinkedHashMap<>();
+
+        withSynchronizedWaitKeys(() -> waitKeysCopy.putAll(waitKeys));
+
+        for (Entry<Object, WaitKeyContainer<W>> e : waitKeysCopy.entrySet()) {
             out.writeObject(e.getKey());
             out.writeObject(e.getValue());
         }
@@ -178,7 +226,7 @@ public abstract class BlockingResource<W extends WaitKey> implements DataSeriali
         for (int i = 0; i < count; i++) {
             Object key = in.readObject();
             WaitKeyContainer<W> container = in.readObject();
-            waitKeys.put(key, container);
+            withSynchronizedWaitKeys(() -> waitKeys.put(key, container));
         }
     }
 

@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -238,19 +237,20 @@ public class Semaphore extends BlockingResource<AcquireInvocationKey> implements
     }
 
     private Collection<AcquireInvocationKey> assignPermitsToWaitKeys() {
-        List<AcquireInvocationKey> assigned = new ArrayList<>();
-        Iterator<WaitKeyContainer<AcquireInvocationKey>> iterator = waitKeyContainersIterator();
-        while (iterator.hasNext() && available > 0) {
-            WaitKeyContainer<AcquireInvocationKey> container = iterator.next();
-            AcquireInvocationKey key = container.key();
-            if (key.permits() <= available) {
-                iterator.remove();
-                assigned.addAll(container.keyAndRetries());
-                assignPermitsToInvocation(key.endpoint(), key.invocationUid(), key.permits());
+        return withWeightKeysContainerIterator(iterator -> {
+            List<AcquireInvocationKey> assigned = new ArrayList<>();
+            while (iterator.hasNext() && available > 0) {
+                WaitKeyContainer<AcquireInvocationKey> container = iterator.next();
+                AcquireInvocationKey key = container.key();
+                if (key.permits() <= available) {
+                    iterator.remove();
+                    assigned.addAll(container.keyAndRetries());
+                    assignPermitsToInvocation(key.endpoint(), key.invocationUid(), key.permits());
+                }
             }
-        }
 
-        return assigned;
+            return assigned;
+        });
     }
 
     /**
